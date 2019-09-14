@@ -107,14 +107,18 @@ func processResponse(response http.Response, v interface{}) (string, error) {
 func main() {
 	args := os.Args
 	if len(args) < 3 {
-		exit("Usage: artifact-uploader <dropbox_token> <file_path>")
+		exit("Usage: artifact-uploader <dropbox_token> <file_path> [<upload_path>]")
 	}
 
 	dropboxToken := args[1]
-	fileName := args[2]
-	dropboxFilePath := "/" + filepath.Base(fileName)
+	filePath := args[2]
+	
+	uploadPath := "/" + filepath.Base(filePath)
+	if len(args) >= 4 {
+		uploadPath = args[3]
+	}
 
-	data, err := ioutil.ReadFile(fileName)
+	data, err := ioutil.ReadFile(filePath)
 	exitOnError(err)
 
 	httpClient := &http.Client{}
@@ -125,7 +129,7 @@ func main() {
 		"application/octet-stream",
 		data,
 		map[string]interface{} {
-			"path": dropboxFilePath,
+			"path": uploadPath,
 			"mode": "overwrite",
 			"autorename": true,
 			"mute": false,
@@ -145,7 +149,7 @@ func main() {
 		"https://api.dropboxapi.com/2/sharing/list_shared_links",
 		dropboxToken,
 		map[string]interface{} {
-			"path": dropboxFilePath,
+			"path": uploadPath,
 		})
 	exitOnError(err)
 
@@ -171,7 +175,7 @@ func main() {
 			"https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings",
 			dropboxToken,
 			map[string]interface{} {
-				"path": dropboxFilePath,
+				"path": uploadPath,
 				"settings": map[string]interface{} {
 					"requested_visibility": "public",
 					"access": "viewer",
