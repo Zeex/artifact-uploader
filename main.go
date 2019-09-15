@@ -12,38 +12,38 @@ import (
 	"strings"
 )
 
-type linkVisibility struct {
+type _LinkVisibility struct {
 	Tag string `json:".tag"`
 }
 
-type linkPermissions struct {
-	ResolvedVisibility linkVisibility `json:"resolved_visibility"`
+type _LinkPermissions struct {
+	ResolvedVisibility _LinkVisibility `json:"resolved_visibility"`
 }
 
-type sharedLink struct {
+type _SharedLink struct {
 	ID string `json:"id"`
 	Name string `json:"name"`
 	URL string `json:"url"`
 	PawnLower string `json:"path_lower"`
-	LinkPermissions linkPermissions `json:"link_permissions"`
+	LinkPermissions _LinkPermissions `json:"link_permissions"`
 }
 
-type listSharedLinksResponse struct {
-	Links []sharedLink `json:"links"`
+type _ListSharedLinksResponse struct {
+	Links []_SharedLink `json:"links"`
 }
 
-func exit(message string) {
+func _Exit(message string) {
 	fmt.Fprintln(os.Stderr, message)
 	os.Exit(1)
 }
 
-func exitOnError(err error) {
+func _ExitOnError(err error) {
 	if err != nil {
-		exit(err.Error())
+		_Exit(err.Error())
 	}
 }
 
-func newDropboxContentRequest(
+func _NewDropboxContentRequest(
 		method string,
 		url string,
 		token string,
@@ -64,7 +64,7 @@ func newDropboxContentRequest(
 	return request, nil
 }
 
-func newDropboxAPIRequest(
+func _NewDropboxAPIRequest(
 		method string,
 		url string,
 		token string,
@@ -85,7 +85,7 @@ func newDropboxAPIRequest(
 	return request, nil
 }
 
-func processResponse(response http.Response, v interface{}) (string, error) {
+func _ProcessResponse(response http.Response, v interface{}) (string, error) {
 	responseBody, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err
@@ -107,22 +107,22 @@ func processResponse(response http.Response, v interface{}) (string, error) {
 func main() {
 	args := os.Args
 	if len(args) < 3 {
-		exit("Usage: artifact-uploader <dropbox_token> <file_path> [<upload_path>]")
+		_Exit("Usage: artifact-uploader <dropbox_token> <file_path> [<upload_path>]")
 	}
 
 	dropboxToken := args[1]
 	filePath := args[2]
-	
+
 	uploadPath := "/" + filepath.Base(filePath)
 	if len(args) >= 4 {
 		uploadPath = args[3]
 	}
 
 	data, err := ioutil.ReadFile(filePath)
-	exitOnError(err)
+	_ExitOnError(err)
 
 	httpClient := &http.Client{}
-	request, err := newDropboxContentRequest(
+	request, err := _NewDropboxContentRequest(
 		"POST",
 		"https://content.dropboxapi.com/2/files/upload",
 		dropboxToken,
@@ -135,31 +135,31 @@ func main() {
 			"mute": false,
 			"strict_conflict": false,
 		});
-	exitOnError(err)
+	_ExitOnError(err)
 
 	response, err := httpClient.Do(request)
-	exitOnError(err)
+	_ExitOnError(err)
 	defer response.Body.Close()
 
-	_, err = processResponse(*response, nil)
-	exitOnError(err)
+	_, err = _ProcessResponse(*response, nil)
+	_ExitOnError(err)
 
-	request, err = newDropboxAPIRequest(
+	request, err = _NewDropboxAPIRequest(
 		"POST",
 		"https://api.dropboxapi.com/2/sharing/list_shared_links",
 		dropboxToken,
 		map[string]interface{} {
 			"path": uploadPath,
 		})
-	exitOnError(err)
+	_ExitOnError(err)
 
 	response, err = httpClient.Do(request)
-	exitOnError(err)
+	_ExitOnError(err)
 	defer response.Body.Close()
 
-	var linksResponse listSharedLinksResponse
-	_, err = processResponse(*response, &linksResponse)
-	exitOnError(err)
+	var linksResponse _ListSharedLinksResponse
+	_, err = _ProcessResponse(*response, &linksResponse)
+	_ExitOnError(err)
 
 	var url string
 	for _, link := range linksResponse.Links {
@@ -170,7 +170,7 @@ func main() {
 	}
 
 	if url == "" {
-		request, err = newDropboxAPIRequest(
+		request, err = _NewDropboxAPIRequest(
 			"POST",
 			"https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings",
 			dropboxToken,
@@ -181,21 +181,21 @@ func main() {
 					"access": "viewer",
 				},
 			})
-		exitOnError(err)
+		_ExitOnError(err)
 
 		response, err = httpClient.Do(request)
-		exitOnError(err)
+		_ExitOnError(err)
 		defer response.Body.Close()
 
 		var shareResponse map[string]interface{}
-		_, err = processResponse(*response, &shareResponse)
-		exitOnError(err)
+		_, err = _ProcessResponse(*response, &shareResponse)
+		_ExitOnError(err)
 
 		url = shareResponse["url"].(string)
 	}
 
 	if url == "" {
-		exit("Dropbox API did not return file URL!")
+		_Exit("Dropbox API did not return file URL!")
 	}
 
 	url = strings.Replace(url, "?dl=0", "?dl=1", 1)
